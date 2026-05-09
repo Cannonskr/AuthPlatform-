@@ -1,0 +1,81 @@
+services:
+  auth-api:
+    build:
+      context: .
+      dockerfile: src/Auth.Api/Dockerfile
+    container_name: auth-platform-api
+    ports:
+      - "5100:80"
+      - "5101:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=${SSL_PASSWORD:-password}
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=auth_platform;User=root;Password=${MYSQL_ROOT_PASSWORD:-root};
+      - JwtSettings__PrivateKeyPath=/app/keys/private.pem
+      - JwtSettings__PublicKeyPath=/app/keys/public.pem
+    volumes:
+      - ~/.aspnet/https:/https:ro
+      - ./keys:/app/keys:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - auth-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: auth-platform-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: auth_platform
+    # ports:
+    #   - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - auth-network
+
+  # Optional: Redis for token blacklist and caching
+  redis:
+    image: redis:7-alpine
+    container_name: auth-platform-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - auth-network
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: auth-platform-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - auth-api
+    restart: unless-stopped
+    networks:
+      - auth-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  auth-network:
+    driver: bridge

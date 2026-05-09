@@ -1,0 +1,47 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+**/bin/**
+**/obj/**
+**/packages/**
+*.nupkg
+**/[Rr]elease/**
+**/[Dd]ebug/**
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Secrets & Configuration
+.env
+appsettings.*.local.json
+**/appsettings.Secrets.json
+**/secrets/**
+keys/
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# EF Core Migrations
+**/Migrations/
+
+# Development artifacts
+CLAUDE.md
+task-plan.md
+.rtk/
+tests/**/TestResults/
+*.trx
