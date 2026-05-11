@@ -4,6 +4,7 @@ obj/
 *.user
 *.suo
 *.userosscache
+*.csproj.lscache
 *.sln.docstates
 *.userprefs
 **/bin/**
