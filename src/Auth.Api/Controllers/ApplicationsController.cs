@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Auth.Application.Common.Interfaces;
 using Auth.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -28,7 +29,8 @@ public class ApplicationsController : ControllerBase
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetApplications([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var query = _context.Applications.AsQueryable();
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = _context.Applications.AsNoTracking();
         var totalCount = await query.CountAsync();
         var items = await query
             .Skip((page - 1) * pageSize)
@@ -92,7 +94,8 @@ public class ApplicationsController : ControllerBase
         if (existing is not null)
             return BadRequest(new { error = "An application with this code already exists." });
 
-        var apiKey = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+        var apiKeyBytes = RandomNumberGenerator.GetBytes(32);
+        var apiKey = Convert.ToBase64String(apiKeyBytes);
         var app = new Domain.Entities.Application(
             request.Name,
             request.Code,
@@ -169,7 +172,8 @@ public class ApplicationsController : ControllerBase
         if (app is null)
             return NotFound(new { error = $"Application with ID {id} not found." });
 
-        var newApiKey = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+        var newApiKeyBytes = RandomNumberGenerator.GetBytes(32);
+        var newApiKey = Convert.ToBase64String(newApiKeyBytes);
         app.RotateApiKey(newApiKey);
         await _context.SaveChangesAsync();
 

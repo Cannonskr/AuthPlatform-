@@ -134,6 +134,14 @@ public class RefreshTokenService : IRefreshTokenService
         }
     }
 
+    public async Task<RefreshToken?> GetStoredRefreshTokenAsync(string refreshToken)
+    {
+        var tokenHash = ComputeHash(refreshToken);
+        return await _context.RefreshTokens
+            .AsNoTracking()
+            .FirstOrDefaultAsync(rt => rt.Token == tokenHash);
+    }
+
     public async Task RevokeAllUserTokensAsync(Guid userId)
     {
         var activeTokens = await _context.RefreshTokens

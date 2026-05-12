@@ -9,11 +9,13 @@ public class RevokeTokenCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldDelegateToRefreshTokenService()
     {
-        var serviceMock = new Mock<IRefreshTokenService>();
-        var handler = new RevokeTokenCommandHandler(serviceMock.Object);
+        var refreshTokenServiceMock = new Mock<IRefreshTokenService>();
+        var cacheServiceMock = new Mock<ICacheService>();
+        var jwtServiceMock = new Mock<IJwtService>();
+        var handler = new RevokeTokenCommandHandler(refreshTokenServiceMock.Object, cacheServiceMock.Object, jwtServiceMock.Object);
 
         await handler.Handle(new RevokeTokenCommand("test-rt"), CancellationToken.None);
 
-        serviceMock.Verify(x => x.RevokeRefreshTokenAsync("test-rt"), Times.Once);
+        refreshTokenServiceMock.Verify(x => x.RevokeRefreshTokenAsync("test-rt"), Times.Once);
     }
 }

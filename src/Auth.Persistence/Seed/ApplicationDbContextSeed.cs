@@ -1,6 +1,7 @@
 using Auth.Domain.Entities;
 using Auth.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using AppEntity = Auth.Domain.Entities.Application;
 
 namespace Auth.Persistence.Seed;
@@ -40,12 +41,23 @@ public static class ApplicationDbContextSeed
         string? bootstrapAdminEmail = null, string? bootstrapAdminPassword = null,
         string? bootstrapApiKey = null)
     {
-        // In production, require explicit bootstrap values to be provided
+#if !DEBUG
+        // In production builds, development-only seed paths are unreachable
+        // and explicit bootstrap values are required
         if (!isDevelopment && (string.IsNullOrEmpty(bootstrapAdminEmail) || string.IsNullOrEmpty(bootstrapAdminPassword)))
         {
             throw new InvalidOperationException(
                 "Production database seeding requires ADMIN_EMAIL and ADMIN_PASSWORD environment variables.");
         }
+#else
+        // Warn if development seed is being used outside of dev environment
+        if (!isDevelopment)
+        {
+            Console.Error.WriteLine(
+                "[WARNING] Development seed data is running in a non-development environment! " +
+                "This includes hardcoded credentials. Ensure ASPNETCORE_ENVIRONMENT is correct.");
+        }
+#endif
 
         // Use a single transaction for all seed operations
         await using var transaction = await context.Database.BeginTransactionAsync();

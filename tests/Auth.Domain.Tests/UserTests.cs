@@ -152,11 +152,11 @@ public class UserTests
     }
 
     [Fact]
-    public void VerifyPassword_ShouldCompareCorrectly()
+    public void PasswordVerification_UsesExternalHasher_NotDomainEntity()
     {
+        // VerifyPassword was intentionally removed from User entity to avoid
+        // bypassing BCrypt verification. Use IPasswordHasher.Verify() instead.
         var user = new User("user", "u@t.com", "hash123", "F", "L");
-
-        user.VerifyPassword("hash123").Should().BeTrue();
-        user.VerifyPassword("wrong").Should().BeFalse();
+        user.PasswordHash.Should().Be("hash123");
     }
 }

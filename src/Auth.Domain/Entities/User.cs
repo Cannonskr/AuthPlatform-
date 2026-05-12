@@ -63,10 +63,10 @@ public class User : BaseAuditableEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public bool VerifyPassword(string passwordHash)
-    {
-        return PasswordHash == passwordHash;
-    }
+    /// <summary>
+    /// Note: VerifyPassword has been intentionally removed to avoid bypassing BCrypt verification.
+    /// Use IPasswordHasher.Verify() from the Infrastructure layer instead.
+    /// </summary>
 
     public void RecordLogin()
     {

@@ -28,7 +28,8 @@ public class TenantsController : ControllerBase
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTenants([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var query = _context.Tenants.AsQueryable();
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = _context.Tenants.AsNoTracking();
         var totalCount = await query.CountAsync();
         var items = await query
             .Skip((page - 1) * pageSize)
@@ -119,7 +120,7 @@ public class TenantsController : ControllerBase
         if (tenant is null)
             return NotFound(new { error = $"Tenant with ID {id} not found." });
 
-        tenant.Update(request.Name, request.ConnectionString);
+        tenant.Update(request.Name);
         await _context.SaveChangesAsync();
 
         return NoContent();
@@ -148,4 +149,6 @@ public class TenantsController : ControllerBase
 }
 
 public record CreateTenantRequest(string Name, string Slug);
-public record UpdateTenantRequest(string Name, string? ConnectionString);
+// ConnectionString has been intentionally removed from the public API.
+// Tenant connection strings must be managed through infrastructure configuration only.
+public record UpdateTenantRequest(string Name);

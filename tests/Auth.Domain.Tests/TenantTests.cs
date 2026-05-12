@@ -17,14 +17,13 @@ public class TenantTests
     }
 
     [Fact]
-    public void Update_ShouldChangeNameAndConnectionString()
+    public void Update_ShouldChangeName()
     {
         var tenant = new Tenant("Old", "old", "old-cs");
 
-        tenant.Update("New Corp", "new-cs");
+        tenant.Update("New Corp");
 
         tenant.Name.Should().Be("New Corp");
-        tenant.ConnectionString.Should().Be("new-cs");
         tenant.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(2));
     }
 

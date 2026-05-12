@@ -22,10 +22,9 @@ public class Tenant : BaseAuditableEntity
         IsActive = true;
     }
 
-    public void Update(string name, string? connectionString)
+    public void Update(string name)
     {
         Name = name;
-        ConnectionString = connectionString;
         UpdatedAt = DateTime.UtcNow;
     }
 

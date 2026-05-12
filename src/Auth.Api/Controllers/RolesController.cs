@@ -29,7 +29,8 @@ public class RolesController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<RoleDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRoles([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var query = _context.Roles.AsQueryable();
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = _context.Roles.AsNoTracking();
         var totalCount = await query.CountAsync();
         var items = await query
             .Skip((page - 1) * pageSize)
@@ -64,6 +65,7 @@ public class RolesController : ControllerBase
     public async Task<IActionResult> GetRole(Guid id)
     {
         var role = await _context.Roles
+            .AsNoTracking()
             .Include(r => r.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
             .FirstOrDefaultAsync(r => r.Id == id);

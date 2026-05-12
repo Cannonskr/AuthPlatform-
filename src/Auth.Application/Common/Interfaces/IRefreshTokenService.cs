@@ -1,4 +1,5 @@
 using Auth.Application.Common.Models;
+using Auth.Domain.Entities;
 
 namespace Auth.Application.Common.Interfaces;
 
@@ -8,4 +9,5 @@ public interface IRefreshTokenService
     Task<AuthenticationResult> RefreshTokenAsync(string refreshToken);
     Task RevokeRefreshTokenAsync(string refreshToken);
     Task RevokeAllUserTokensAsync(Guid userId);
+    Task<RefreshToken?> GetStoredRefreshTokenAsync(string refreshToken);
 }

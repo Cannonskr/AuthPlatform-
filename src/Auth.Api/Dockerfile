@@ -3,6 +3,10 @@ WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
+# Create a non-root user
+RUN addgroup --system --gid 1001 appgroup \
+    && adduser --system --uid 1001 --gid 1001 appuser
+
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
@@ -32,6 +36,9 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 
 # Create keys directory (will be overridden by volume mount in production)
-RUN mkdir -p /app/keys
+RUN mkdir -p /app/keys && chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
 
 ENTRYPOINT ["dotnet", "Auth.Api.dll"]

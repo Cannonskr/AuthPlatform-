@@ -28,7 +28,7 @@ public class PermissionsController : ControllerBase
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPermissions([FromQuery] string? group = null)
     {
-        var query = _context.Permissions.AsQueryable();
+        var query = _context.Permissions.AsNoTracking();
 
         if (!string.IsNullOrEmpty(group))
         {
@@ -60,7 +60,7 @@ public class PermissionsController : ControllerBase
     [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPermissionGroups()
     {
-        var groups = await _context.Permissions
+        var groups = await _context.Permissions.AsNoTracking()
             .Select(p => p.Group)
             .Distinct()
             .OrderBy(g => g)

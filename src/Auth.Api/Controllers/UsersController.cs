@@ -40,9 +40,12 @@ public class UsersController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<UserDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
         var query = _context.Users
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
+            .AsNoTracking()
             .AsQueryable();
 
         // Apply tenant isolation if multi-tenant is enabled
@@ -87,6 +90,7 @@ public class UsersController : ControllerBase
         var query = _context.Users
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
+            .AsNoTracking()
             .Where(u => u.Id == id);
 
         // Apply tenant isolation if multi-tenant is enabled
@@ -127,17 +131,26 @@ public class UsersController : ControllerBase
             return BadRequest(new { error = "A user with this email or username already exists." });
 
         var passwordHash = _passwordHasher.Hash(request.Password);
+
+        // Assign TenantId from the current tenant context
+        Guid? tenantId = null;
+        if (_tenantService.IsMultiTenantEnabled && Guid.TryParse(_tenantService.CurrentTenantId, out var parsedTenantId))
+        {
+            tenantId = parsedTenantId;
+        }
+
         var user = new User(
             request.Username,
             request.Email,
             passwordHash,
             request.FirstName,
-            request.LastName);
+            request.LastName,
+            tenantId);
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("User created: {UserId} ({Email})", user.Id, user.Email);
+        _logger.LogInformation("User created: {UserId} ({Email}), Tenant: {TenantId}", user.Id, user.Email, tenantId);
 
         return CreatedAtAction(nameof(GetUser), new { id = user.Id }, new UserDto
         {
@@ -158,7 +171,15 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequest request)
     {
-        var user = await _context.Users.FindAsync(id);
+        var query = _context.Users.Where(u => u.Id == id);
+
+        // Apply tenant isolation if multi-tenant is enabled
+        if (_tenantService.IsMultiTenantEnabled && Guid.TryParse(_tenantService.CurrentTenantId, out var tenantId))
+        {
+            query = query.Where(u => u.TenantId == tenantId);
+        }
+
+        var user = await query.FirstOrDefaultAsync();
         if (user is null)
             return NotFound(new { error = $"User with ID {id} not found." });
 
@@ -177,7 +198,15 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteUser(Guid id)
     {
-        var user = await _context.Users.FindAsync(id);
+        var query = _context.Users.Where(u => u.Id == id);
+
+        // Apply tenant isolation if multi-tenant is enabled
+        if (_tenantService.IsMultiTenantEnabled && Guid.TryParse(_tenantService.CurrentTenantId, out var tenantId))
+        {
+            query = query.Where(u => u.TenantId == tenantId);
+        }
+
+        var user = await query.FirstOrDefaultAsync();
         if (user is null)
             return NotFound(new { error = $"User with ID {id} not found." });
 

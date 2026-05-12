@@ -9,11 +9,14 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Auth.Infrastructure.Services;
 
-public class JwtService : IJwtService
+public class JwtService : IJwtService, IDisposable
 {
     private readonly IConfiguration _configuration;
     private readonly JwtSettings _jwtSettings;
     private readonly ILogger<JwtService> _logger;
+    private readonly RSA _privateKey;
+    private readonly RSA _publicKey;
+    private bool _disposed;
 
     private const string ClaimTypeApp = "app";
     private const string ClaimTypeTenant = "tenant";
@@ -25,6 +28,10 @@ public class JwtService : IJwtService
         _logger = logger;
         _jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>()
             ?? throw new InvalidOperationException("JwtSettings not configured");
+
+        // Cache RSA keys as fields — created once, disposed with the service
+        _privateKey = LoadPrivateKey();
+        _publicKey = LoadPublicKey();
     }
 
     public Task<JwtToken> GenerateTokenAsync(Guid userId, string email, string fullName,
@@ -50,9 +57,8 @@ public class JwtService : IJwtService
         foreach (var permission in permissions)
             claims.Add(new Claim(ClaimTypePermission, permission));
 
-        var rsaKey = GetPrivateKey();
         var signingCredentials = new SigningCredentials(
-            new RsaSecurityKey(rsaKey), SecurityAlgorithms.RsaSha256);
+            new RsaSecurityKey(_privateKey), SecurityAlgorithms.RsaSha256);
 
         var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes);
 
@@ -77,14 +83,13 @@ public class JwtService : IJwtService
     public Task<Guid?> ValidateTokenAsync(string token)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var rsaKey = GetPublicKey();
 
         try
         {
             var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new RsaSecurityKey(rsaKey),
+                IssuerSigningKey = new RsaSecurityKey(_publicKey),
                 ValidateIssuer = true,
                 ValidIssuer = _jwtSettings.Issuer,
                 ValidateAudience = false,
@@ -112,7 +117,9 @@ public class JwtService : IJwtService
         }
     }
 
-    private RSA GetPrivateKey()
+    public RSA GetPublicKeyForValidation() => _publicKey;
+
+    private RSA LoadPrivateKey()
     {
         var rsa = RSA.Create();
         var privateKeyPath = _jwtSettings.PrivateKeyPath;
@@ -133,7 +140,7 @@ public class JwtService : IJwtService
             "JWT private key not found. Configure JwtSettings:PrivateKeyPath or JwtSettings:PrivateKey.");
     }
 
-    private RSA GetPublicKey()
+    private RSA LoadPublicKey()
     {
         var rsa = RSA.Create();
         var publicKeyPath = _jwtSettings.PublicKeyPath;
@@ -152,6 +159,16 @@ public class JwtService : IJwtService
 
         throw new InvalidOperationException(
             "JWT public key not found. Configure JwtSettings:PublicKeyPath or JwtSettings:PublicKey.");
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _privateKey?.Dispose();
+        _publicKey?.Dispose();
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 }
 

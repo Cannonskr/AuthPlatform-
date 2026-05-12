@@ -29,7 +29,8 @@ services:
     image: mysql:8.0
     container_name: auth-platform-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      # Set a strong password in production. Do not rely on the default.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: auth_platform
     # ports:
     #   - "3306:3306"

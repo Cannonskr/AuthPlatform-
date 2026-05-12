@@ -79,6 +79,18 @@ builder.Services.AddRateLimiter(options =>
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             }));
+
+    // Refresh token rate limiter - prevents brute-force enumeration
+    options.AddPolicy<string>("Refresh", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
 });
 
 // Add Swagger with JWT Bearer authentication support
@@ -96,8 +108,24 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwaggerWithUI();
 }
+else
+{
+    // Enforce HSTS in non-development environments
+    app.UseHsts();
+}
 
-app.UseCors("AllowAll");
+// Security headers middleware
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    // Note: Content-Security-Policy should be added once frontend URLs are known
+    await next();
+});
+
+app.UseCors("ApiCors");
 
 app.UseAuthentication();
 app.UseAuthorization();

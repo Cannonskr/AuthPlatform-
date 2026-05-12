@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using Auth.Application.Common.Interfaces;
+using Auth.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -16,7 +18,7 @@ public static class ServiceCollectionExtensions
         {
             if (environment.IsDevelopment())
             {
-                options.AddPolicy("AllowAll", builder =>
+                options.AddPolicy("ApiCors", builder =>
                 {
                     builder.AllowAnyOrigin()
                         .AllowAnyMethod()
@@ -28,7 +30,7 @@ public static class ServiceCollectionExtensions
                 var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
                     ?? throw new InvalidOperationException("Cors:AllowedOrigins must be configured in production.");
 
-                options.AddPolicy("AllowAll", builder =>
+                options.AddPolicy("ApiCors", builder =>
                 {
                     builder.WithOrigins(allowedOrigins)
                         .AllowAnyMethod()
@@ -79,7 +81,8 @@ public static class ServiceCollectionExtensions
                 IssuerSigningKey = rsa is not null ? new RsaSecurityKey(rsa.ExportParameters(false)) : null,
                 ValidateIssuer = true,
                 ValidIssuer = issuer,
-                ValidateAudience = false,
+                ValidateAudience = true,
+                ValidAudience = jwtSettings["Audience"] ?? issuer,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
@@ -98,6 +101,25 @@ public static class ServiceCollectionExtensions
                         context.Token = accessToken;
                     }
                     return Task.CompletedTask;
+                },
+
+                // Check JWT blacklist (JTI) on every authenticated request
+                OnTokenValidated = async context =>
+                {
+                    var jti = context.Principal?.FindFirst("jti")?.Value;
+                    if (!string.IsNullOrEmpty(jti))
+                    {
+                        var cacheService = context.HttpContext.RequestServices.GetService<ICacheService>();
+                        if (cacheService != null)
+                        {
+                            var isBlacklisted = await cacheService.GetAsync<string>($"jti_blacklist:{jti}");
+                            if (isBlacklisted != null)
+                            {
+                                context.Fail("Token has been revoked.");
+                                return;
+                            }
+                        }
+                    }
                 }
             };
         });

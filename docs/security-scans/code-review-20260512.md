@@ -161,20 +161,9 @@ The JWT audience is set during token generation (`audience: applicationCode`) bu
 
 ### 🟠 SEC-08: RSA Key Leaked via IServiceProvider — Key Material in Memory (Important)
 
-**File:** `ServiceCollectionExtensions.cs:52-67`
+**Files:** `ServiceCollectionExtensions.cs:52-67`, `JwtService.cs:115-134`
 
 The RSA object is created but its private parameters are exported and the RSA instance is never disposed. In the `JwtService`, a new RSA key is created per token generation call (`RSA.Create()`) and never disposed.
-
-**File:** `JwtService.cs:115-134`
-
-```csharp
-private RSA GetPrivateKey()
-{
-    var rsa = RSA.Create(); // Never disposed!
-    ...
-    return rsa;
-}
-```
 
 **Risk:** Memory leak of RSA key material; key data lingering in managed heap.
 
@@ -503,3 +492,34 @@ USER appuser
 ### ❌ **Request Changes** — Issues must be addressed before production deployment
 
 The 5 Critical security findings (hardcoded credentials, missing security headers, weak API key generation, connection string injection) represent real attack surfaces that must be resolved. The codebase foundation is solid and well-structured, but needs the security hardening pass outlined above before it can safely serve as an enterprise auth platform.
+
+---
+
+## Remediation Status
+
+| ID | Finding | Severity | Status | PR/Commit |
+|----|---------|----------|--------|-----------|
+| SEC-01 | Hardcoded DB credentials in config | 🔴 Critical | ✅ Fixed | `ab6a73a` |
+| SEC-02 | Hardcoded seed passwords | 🔴 Critical | ✅ Fixed | `ab6a73a` + current |
+| SEC-03 | Missing security headers | 🔴 Critical | ✅ Fixed | current |
+| SEC-04 | Weak API key generation | 🔴 Critical | ✅ Fixed | current |
+| SEC-05 | ConnectionString in UpdateTenant API | 🔴 Critical | ✅ Fixed | current |
+| SEC-06 | Refresh endpoint missing rate limiting | 🟠 Important | ✅ Fixed | current |
+| SEC-07 | JWT audience validation disabled | 🟠 Important | ✅ Fixed | current |
+| SEC-08 | RSA key memory leak | 🟠 Important | ✅ Fixed | current |
+| SEC-09 | No JWT blacklist | 🟠 Important | ✅ Fixed | current |
+| COR-01 | User.VerifyPassword not using BCrypt | 🟠 Important | ✅ Fixed | current |
+| COR-02 | UpdateUser/DeleteUser missing tenant | 🟠 Important | ✅ Fixed | current |
+| COR-03 | CreateUser not scoped to tenant | 🟠 Important | ✅ Fixed | current |
+| CFG-01 | Misleading CORS policy name | 🟠 Important | ✅ Fixed | current |
+| COR-04 | Duplicate check not tenant-scoped | 🟡 Minor | ✅ Fixed | current |
+| COR-05 | Lockout checked after password verify | 🟡 Minor | ✅ Fixed | current |
+| PERF-01 | AsNoTracking missing | 🟡 Minor | ✅ Fixed | current |
+| PERF-02 | Deep include chain | 🟡 Minor | ✅ Fixed | current |
+| PERF-03 | pageSize not bounded | 🟡 Minor | ✅ Fixed | current |
+| CFG-02 | Docker default root password | 🟡 Minor | ✅ Fixed | current |
+| CFG-03 | Dockerfile runs as root | 🟡 Minor | ✅ Fixed | current |
+| ARCH-01 | Controllers bypass CQRS | 🟡 Minor | 🔲 Deferred | Post-MVP |
+| ARCH-02 | DTOs in controller files | 🟡 Minor | 🔲 Deferred | Post-MVP |
+| ARCH-03 | BCrypt in Persistence | 🟡 Minor | 🔲 Deferred | Post-MVP |
+| ARCH-04 | Missing AuthorizationBehavior | 🟡 Minor | 🔲 Deferred | Post-MVP |

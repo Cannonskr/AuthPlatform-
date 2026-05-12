@@ -41,15 +41,17 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthenticationR
         if (user is null)
             return AuthenticationResult.Failed("Invalid email or password.");
 
+        // Check lockout BEFORE verifying password to avoid unnecessary BCrypt computation
+        // and prevent extending lockout timer on already-locked accounts
+        if (!user.CanLogin())
+            return AuthenticationResult.Failed("Account is locked or inactive.");
+
         if (!_passwordHasher.Verify(request.Password, user.PasswordHash))
         {
             user.RecordFailedLoginAttempt(5, 15);
             await _context.SaveChangesAsync(cancellationToken);
             return AuthenticationResult.Failed("Invalid email or password.");
         }
-
-        if (!user.CanLogin())
-            return AuthenticationResult.Failed("Account is locked or inactive.");
 
         user.RecordLogin();
 
