@@ -4,6 +4,7 @@ using Auth.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
 
 namespace Auth.Infrastructure;
 
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, PasswordHasherService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddSingleton<ICacheService, CacheService>();
+        services.AddScoped<ITenantService, TenantService>();
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
 

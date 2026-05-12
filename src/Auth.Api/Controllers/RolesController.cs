@@ -25,6 +25,7 @@ public class RolesController : ControllerBase
     /// Gets a paginated list of roles.
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = "Permission:roles.read")]
     [ProducesResponseType(typeof(PagedResult<RoleDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRoles([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
@@ -57,6 +58,7 @@ public class RolesController : ControllerBase
     /// Gets a role by ID.
     /// </summary>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "Permission:roles.read")]
     [ProducesResponseType(typeof(RoleDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRole(Guid id)
@@ -90,6 +92,7 @@ public class RolesController : ControllerBase
     /// Creates a new role.
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = "Permission:roles.create")]
     [ProducesResponseType(typeof(RoleDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
@@ -119,6 +122,7 @@ public class RolesController : ControllerBase
     /// Updates a role.
     /// </summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "Permission:roles.update")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateRoleRequest request)
@@ -140,6 +144,7 @@ public class RolesController : ControllerBase
     /// Deletes a role.
     /// </summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "Permission:roles.delete")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -164,6 +169,7 @@ public class RolesController : ControllerBase
     /// Assigns a role to a user.
     /// </summary>
     [HttpPost("{roleId:guid}/users/{userId:guid}")]
+    [Authorize(Policy = "Permission:roles.update")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AssignRoleToUser(Guid roleId, Guid userId)
@@ -195,6 +201,7 @@ public class RolesController : ControllerBase
     /// Removes a role from a user.
     /// </summary>
     [HttpDelete("{roleId:guid}/users/{userId:guid}")]
+    [Authorize(Policy = "Permission:roles.update")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveRoleFromUser(Guid roleId, Guid userId)

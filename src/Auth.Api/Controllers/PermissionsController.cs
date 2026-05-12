@@ -24,6 +24,7 @@ public class PermissionsController : ControllerBase
     /// Gets all available permissions, optionally filtered by group.
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = "Permission:permissions.read")]
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPermissions([FromQuery] string? group = null)
     {
@@ -55,6 +56,7 @@ public class PermissionsController : ControllerBase
     /// Gets permission groups.
     /// </summary>
     [HttpGet("groups")]
+    [Authorize(Policy = "Permission:permissions.read")]
     [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPermissionGroups()
     {
@@ -71,6 +73,7 @@ public class PermissionsController : ControllerBase
     /// Gets all permissions assigned to a specific role.
     /// </summary>
     [HttpGet("roles/{roleId:guid}")]
+    [Authorize(Policy = "Permission:permissions.read")]
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRolePermissions(Guid roleId)
     {
@@ -97,6 +100,7 @@ public class PermissionsController : ControllerBase
     /// Gets all permissions for a specific user (direct + inherited from roles).
     /// </summary>
     [HttpGet("users/{userId:guid}")]
+    [Authorize(Policy = "Permission:permissions.read")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUserPermissions(Guid userId)
     {
@@ -144,6 +148,7 @@ public class PermissionsController : ControllerBase
     /// Assigns a permission to a role.
     /// </summary>
     [HttpPost("roles/{roleId:guid}/{permissionId:guid}")]
+    [Authorize(Policy = "Permission:permissions.assign")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AssignPermissionToRole(Guid roleId, Guid permissionId)
@@ -175,6 +180,7 @@ public class PermissionsController : ControllerBase
     /// Removes a permission from a role.
     /// </summary>
     [HttpDelete("roles/{roleId:guid}/{permissionId:guid}")]
+    [Authorize(Policy = "Permission:permissions.assign")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -205,6 +211,7 @@ public class PermissionsController : ControllerBase
     /// Assigns a permission directly to a user (grant or deny override).
     /// </summary>
     [HttpPost("users/{userId:guid}/{permissionId:guid}")]
+    [Authorize(Policy = "Permission:permissions.assign")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AssignPermissionToUser(Guid userId, Guid permissionId,
@@ -240,6 +247,7 @@ public class PermissionsController : ControllerBase
     /// Removes a direct permission override from a user.
     /// </summary>
     [HttpDelete("users/{userId:guid}/{permissionId:guid}")]
+    [Authorize(Policy = "Permission:permissions.assign")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemovePermissionFromUser(Guid userId, Guid permissionId)

@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Threading.RateLimiting;
 using Auth.Api.Extensions;
 using Auth.Application;
 using Auth.Infrastructure;
@@ -50,6 +51,36 @@ builder.Services.AddPersistence(builder.Configuration);
 // Add API services (controllers, cors, health checks)
 builder.Services.AddApiServices(builder.Configuration, builder.Environment);
 
+// Add rate limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Global rate limiter for all endpoints
+    options.AddPolicy<string>("Global", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    // Login-specific rate limiter - stricter to prevent brute force
+    options.AddPolicy<string>("Login", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
+
 // Add Swagger with JWT Bearer authentication support
 builder.Services.AddSwaggerWithJwtAuth(builder.Environment);
 
@@ -70,6 +101,9 @@ app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Apply rate limiting after authorization
+app.UseRateLimiter();
 
 app.MapControllers();
 app.MapHealthChecks("/health");

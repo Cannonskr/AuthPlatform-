@@ -24,7 +24,18 @@ public static class ApplicationBuilderExtensions
         try
         {
             await context.Database.MigrateAsync();
-            await ApplicationDbContextSeed.SeedAsync(context);
+
+            var isDevelopment = app.Environment.IsDevelopment();
+            var bootstrapAdminEmail = app.Configuration["ADMIN_EMAIL"];
+            var bootstrapAdminPassword = app.Configuration["ADMIN_PASSWORD"];
+            var bootstrapApiKey = app.Configuration["ADMIN_API_KEY"];
+
+            await ApplicationDbContextSeed.SeedAsync(
+                context,
+                isDevelopment,
+                bootstrapAdminEmail,
+                bootstrapAdminPassword,
+                bootstrapApiKey);
         }
         catch (Exception ex)
         {

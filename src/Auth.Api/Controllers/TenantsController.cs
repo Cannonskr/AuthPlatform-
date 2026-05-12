@@ -24,6 +24,7 @@ public class TenantsController : ControllerBase
     /// Gets a paginated list of tenants.
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = "Permission:tenants.read")]
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTenants([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
@@ -55,6 +56,7 @@ public class TenantsController : ControllerBase
     /// Gets a tenant by ID.
     /// </summary>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "Permission:tenants.read")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTenant(Guid id)
@@ -77,6 +79,7 @@ public class TenantsController : ControllerBase
     /// Creates a new tenant.
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = "Permission:tenants.manage")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateTenant([FromBody] CreateTenantRequest request)
@@ -107,6 +110,7 @@ public class TenantsController : ControllerBase
     /// Updates a tenant.
     /// </summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "Permission:tenants.manage")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateTenant(Guid id, [FromBody] UpdateTenantRequest request)
@@ -125,6 +129,7 @@ public class TenantsController : ControllerBase
     /// Deactivates a tenant.
     /// </summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "Permission:tenants.manage")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeactivateTenant(Guid id)

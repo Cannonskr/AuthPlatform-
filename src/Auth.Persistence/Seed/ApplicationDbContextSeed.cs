@@ -36,18 +36,27 @@ public static class ApplicationDbContextSeed
         ["system.logs"] = Guid.Parse("C1C2C3C4-D1D2-EEEE-CCCC-333344445555"),
     };
 
-    public static async Task SeedAsync(ApplicationDbContext context)
+    public static async Task SeedAsync(ApplicationDbContext context, bool isDevelopment,
+        string? bootstrapAdminEmail = null, string? bootstrapAdminPassword = null,
+        string? bootstrapApiKey = null)
     {
+        // In production, require explicit bootstrap values to be provided
+        if (!isDevelopment && (string.IsNullOrEmpty(bootstrapAdminEmail) || string.IsNullOrEmpty(bootstrapAdminPassword)))
+        {
+            throw new InvalidOperationException(
+                "Production database seeding requires ADMIN_EMAIL and ADMIN_PASSWORD environment variables.");
+        }
+
         // Use a single transaction for all seed operations
         await using var transaction = await context.Database.BeginTransactionAsync();
 
         try
         {
-            await SeedApplicationAsync(context);
+            await SeedApplicationAsync(context, isDevelopment, bootstrapApiKey);
             await SeedPermissionsAsync(context);
             await SeedRolesAsync(context);
             await SeedRolePermissionsAsync(context);
-            await SeedUsersAsync(context);
+            await SeedUsersAsync(context, isDevelopment, bootstrapAdminEmail, bootstrapAdminPassword);
             await SeedUserRolesAsync(context);
 
             await context.SaveChangesAsync();
@@ -60,17 +69,18 @@ public static class ApplicationDbContextSeed
         }
     }
 
-    private static async Task SeedApplicationAsync(ApplicationDbContext context)
+    private static async Task SeedApplicationAsync(ApplicationDbContext context, bool isDevelopment, string? bootstrapApiKey)
     {
         if (await context.Applications.AnyAsync())
             return;
 
+        var apiKey = isDevelopment ? "default-api-key" : (bootstrapApiKey ?? Guid.NewGuid().ToString("N"));
         context.Applications.Add(new AppEntity(
             DefaultAppId,
             "Admin Portal",
             "admin-portal",
             "Default administration portal application",
-            "default-api-key"));
+            apiKey));
     }
 
     private static async Task SeedPermissionsAsync(ApplicationDbContext context)
@@ -173,28 +183,43 @@ public static class ApplicationDbContextSeed
         context.RolePermissions.AddRange(rolePermissions);
     }
 
-    private static async Task SeedUsersAsync(ApplicationDbContext context)
+    private static async Task SeedUsersAsync(ApplicationDbContext context, bool isDevelopment,
+        string? bootstrapAdminEmail, string? bootstrapAdminPassword)
     {
         if (await context.Users.AnyAsync())
             return;
 
-        var users = new List<User>
+        var users = new List<User>();
+
+        if (isDevelopment)
         {
-            new(
+            // Development: use fixed credentials for local testing
+            users.Add(new User(
                 AdminUserId,
                 "admin",
                 "admin@authplatform.com",
                 BCrypt.Net.BCrypt.HashPassword("Admin@123", workFactor: 12),
                 "System",
-                "Administrator"),
-            new(
+                "Administrator"));
+            users.Add(new User(
                 ViewerUserId,
                 "viewer",
                 "viewer@authplatform.com",
                 BCrypt.Net.BCrypt.HashPassword("Viewer@123", workFactor: 12),
                 "Read",
-                "Only"),
-        };
+                "Only"));
+        }
+        else
+        {
+            // Production: use operator-provided bootstrap credentials only
+            users.Add(new User(
+                AdminUserId,
+                "admin",
+                bootstrapAdminEmail!,
+                BCrypt.Net.BCrypt.HashPassword(bootstrapAdminPassword!, workFactor: 12),
+                "System",
+                "Administrator"));
+        }
 
         context.Users.AddRange(users);
     }

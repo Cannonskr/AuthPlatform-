@@ -86,10 +86,14 @@ public static class ServiceCollectionExtensions
 
             options.Events = new JwtBearerEvents
             {
+                // Only extract tokens from query string for SignalR/WebSocket endpoints
+                // which cannot use Authorization headers. All other endpoints must use
+                // the Authorization header.
                 OnMessageReceived = context =>
                 {
                     var accessToken = context.Request.Query["access_token"];
-                    if (!string.IsNullOrEmpty(accessToken))
+                    if (!string.IsNullOrEmpty(accessToken)
+                        && context.Request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase))
                     {
                         context.Token = accessToken;
                     }

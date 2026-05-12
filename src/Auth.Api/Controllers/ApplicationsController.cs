@@ -24,6 +24,7 @@ public class ApplicationsController : ControllerBase
     /// Gets a paginated list of applications.
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = "Permission:applications.read")]
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetApplications([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
@@ -56,6 +57,7 @@ public class ApplicationsController : ControllerBase
     /// Gets an application by ID.
     /// </summary>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "Permission:applications.read")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetApplication(Guid id)
@@ -79,6 +81,7 @@ public class ApplicationsController : ControllerBase
     /// Creates a new application.
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = "Permission:applications.manage")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateApplication([FromBody] CreateApplicationRequest request)
@@ -117,6 +120,7 @@ public class ApplicationsController : ControllerBase
     /// Updates an application.
     /// </summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "Permission:applications.manage")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateApplication(Guid id, [FromBody] UpdateApplicationRequest request)
@@ -135,6 +139,7 @@ public class ApplicationsController : ControllerBase
     /// Deactivates an application.
     /// </summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "Permission:applications.manage")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeactivateApplication(Guid id)
@@ -155,6 +160,7 @@ public class ApplicationsController : ControllerBase
     /// Rotates the API key for an application.
     /// </summary>
     [HttpPost("{id:guid}/rotate-key")]
+    [Authorize(Policy = "Permission:applications.manage")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RotateApiKey(Guid id)

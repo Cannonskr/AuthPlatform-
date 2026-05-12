@@ -15,24 +15,28 @@ public class UsersController : ControllerBase
     private readonly IApplicationDbContext _context;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ICurrentUserService _currentUser;
+    private readonly ITenantService _tenantService;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
         IApplicationDbContext context,
         IPasswordHasher passwordHasher,
         ICurrentUserService currentUser,
+        ITenantService tenantService,
         ILogger<UsersController> logger)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _currentUser = currentUser;
+        _tenantService = tenantService;
         _logger = logger;
     }
 
     /// <summary>
-    /// Gets a paginated list of users.
+    /// Gets a paginated list of users scoped to the current tenant.
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = "Permission:users.read")]
     [ProducesResponseType(typeof(PagedResult<UserDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
@@ -40,6 +44,12 @@ public class UsersController : ControllerBase
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
             .AsQueryable();
+
+        // Apply tenant isolation if multi-tenant is enabled
+        if (_tenantService.IsMultiTenantEnabled && Guid.TryParse(_tenantService.CurrentTenantId, out var tenantId))
+        {
+            query = query.Where(u => u.TenantId == tenantId);
+        }
 
         var totalCount = await query.CountAsync();
         var items = await query
@@ -66,17 +76,26 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Gets a user by ID.
+    /// Gets a user by ID, scoped to the current tenant.
     /// </summary>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "Permission:users.read")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetUser(Guid id)
     {
-        var user = await _context.Users
+        var query = _context.Users
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(u => u.Id == id);
+            .Where(u => u.Id == id);
+
+        // Apply tenant isolation if multi-tenant is enabled
+        if (_tenantService.IsMultiTenantEnabled && Guid.TryParse(_tenantService.CurrentTenantId, out var tenantId))
+        {
+            query = query.Where(u => u.TenantId == tenantId);
+        }
+
+        var user = await query.FirstOrDefaultAsync();
 
         if (user is null)
             return NotFound(new { error = $"User with ID {id} not found." });
@@ -96,6 +115,7 @@ public class UsersController : ControllerBase
     /// Creates a new user.
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = "Permission:users.create")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
@@ -133,6 +153,7 @@ public class UsersController : ControllerBase
     /// Updates an existing user.
     /// </summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "Permission:users.update")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequest request)
@@ -151,6 +172,7 @@ public class UsersController : ControllerBase
     /// Deletes a user.
     /// </summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "Permission:users.delete")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteUser(Guid id)
